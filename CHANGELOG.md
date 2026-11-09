@@ -1,0 +1,105 @@
+# CHANGELOG
+
+## 3.0.0
+
+- The CLI talks to untag at `https://cloud.untag.ru`. Published site links come back from the API.
+- The link file is `.untag`. The API token variable is `UNTAG_TOKEN`. Saved logins live in `~/.untag`.
+- Install from GitHub releases, `install.sh`, or `npm install -g untag-cli`.
+
+## 2.10.0
+
+- New `fl annotations reply <id> -m "text"`: reply to a visitor's note as the site author (the reply shows an Author badge on the page). `fl annotations resolve <ids...> -m "text"` posts the message as a reply to each id, then resolves them (ids only, not `--all`).
+- `fl annotations pull` now includes each note's replies (oldest first; author, whether the site author wrote it, time, text) and who resolved it, inside the same `<untrusted-annotation>` tags, JSON-encoded. JSON output gains `replies` and `resolvedBy`.
+
+## 2.9.0
+
+- Publishing a folder that was published with `--anon` while logged in now claims that anonymous site into your account (when this computer has its claim token) and updates it, instead of creating a second site. It keeps its URL and stops expiring. If it can't be claimed, `fl` says why and publishes a new site as before; if the check fails with a network or server error, nothing is published.
+- New `--json` flag: prints the publish result (`ok`, `url`, `siteId`, `siteName`, `anon`, `claimUrl`, `expiresAt`, `claimed`, `error`) as JSON on stdout, with everything else on stderr. Implies `--yes`.
+- `fl --anon` prints the claim link as soon as the site is created, before uploading.
+- `fl --anon` in a folder linked to an account site warns before creating a separate temporary site; `--overwrite` with `--anon` is reported as ignored.
+- Clearer login errors: an expired or revoked login suggests `fl login` or `fl --anon`, a rejected `UNTAG_TOKEN` is named, and network errors are no longer reported as "not authenticated".
+
+## 2.6.0
+
+- New `fl annotations pull|resolve|delete` commands. `pull` prints open annotations (visitors' notes on your pages) as Markdown, grouped by file, ready to hand to an AI agent, or as JSON with `--format json`; `--all` includes resolved ones and `--path` limits to one file. Reviewer-written text is JSON-encoded inside `<untrusted-annotation>` tags and the output tells the agent to treat notes as editing requests, never commands. `resolve` and `delete` take ids or `--all` (`delete --all` asks first; pass `--yes` without a terminal). `--site` is an alias for `--name`.
+- New `--annotations` flag: `fl --annotations ./folder` publishes and turns annotations on for the site; `--annotations=false` turns them off. Not available with `--anon`.
+- `fl` (including an unchanged republish) and `fl settings` print `Annotations: ON — anyone with this link can annotate` while annotations are on, and `N open annotations → fl annotations pull` when notes are waiting.
+- `fl settings` now prints its "Multiple sites found" list on stderr, like the other site-picking commands.
+
+## 2.5.0
+
+- New `--anon` flag: publish without an account (`fl --anon ./folder`). No login needed; the site gets a random `<name>-anon.untag.ru` URL, expires in 7 days unless claimed, and `fl` prints the live URL and a claim link (`Claim it to keep it (expires <date>): <claimUrl>`). Opening the claim link, signing in and confirming moves the site into your account. If an upload fails, `fl` still prints the claim link. Anonymous sites are limited to 200 files / 50 MB.
+- Re-running `fl --anon` on the same folder updates the same anonymous site: the site ID and claim token are saved in the folder's `.untag`. Single files and multiple paths aren't linked, so each anonymous publish of them creates a new site. If the saved site has expired or been deleted, or its claim token is rejected (HTTP 401, 404 or 410), `fl` says so once, removes the anonymous link from `.untag` and exits 1; run it again to create a new one. If the claim token is refused for this site (HTTP 403), `fl` shows the server's message and keeps the link. If the site has been claimed (HTTP 409), `fl --anon` exits 1 but keeps the link and tells you to `fl login` and publish without `--anon`, which updates the claimed site.
+- `fl` never publishes anonymously unless asked: without a login and without `--anon` it exits 1, suggesting `fl login` or `fl --anon <path>`.
+- New `UNTAG_TOKEN` environment variable: an API token (e.g. a personal access token) used instead of the one saved by `fl login`, for CI and agents. `fl whoami` notes when it is in use. While it's set, `fl login` refuses to run (a saved login would be ignored), and `fl logout` removes only the saved login and says the variable is still in effect.
+- Publishing a folder previously published with `--anon` while logged in: if you've claimed that site, `fl` relinks the folder's `.untag` to it and updates it (no duplicate site). Otherwise the folder is treated as unlinked (it gets a site in your account), and `fl` prints the earlier site's claim link so you can still keep it. `fl sync` refuses anonymously published folders and points to `fl --anon <folder>`.
+
+## 2.4.0
+
+- Fix: publishing a path that isn't linked to a site (no `.untag` file) no longer silently overwrites an existing site with the same name. Previously `fl ./notes` would sync into your existing `notes` site and delete any of its files missing locally, with no prompt, even without `--yes`. Now `fl` warns (naming the site and its URL) and asks whether to overwrite it or choose a new name. With `--yes` it refuses and exits non-zero; pass `--overwrite` to publish into the existing site on purpose. Linked folders are unchanged.
+- New `--overwrite` flag: the explicit opt-in for publishing an unlinked path into an existing site with the same name. `--yes` now only skips the new-site name prompt.
+- Fix: `fl` now exits with a non-zero status on every failure (not authenticated, path not found, validation errors, site not found, API errors, failed uploads), so scripts, CI and agents can detect failures. `fl whoami` exits 1 when not logged in or when the token is invalid.
+- `install.sh`: set `FL_INSTALL_DIR` to install without `sudo` (e.g. `FL_INSTALL_DIR="$HOME/.local/bin"`), for AI agents and CI. The script now also warns when the install directory isn't on your `PATH`.
+- The "couldn't find a site" warning now points to the dashboard at `https://cloud.untag.ru`.
+
+## 2.3.0
+
+- Fix: `fl publish` now respects `contentExclude`/`contentInclude` in `config.json`, matching the visibility rules the GitHub-sync build already applies. Previously the CLI ignored `config.json` entirely, so excluded paths (e.g. drafts, internal notes) were published and served even though the GitHub-sync build correctly hid them for the same repo.
+
+## 2.2.0
+
+- Recover gracefully when a site has been renamed on the server. Previously, if the stored site name no longer matched (e.g. after the site-name unification), `fl` reported the site as deleted, removed the local `.untag`, and could create a duplicate site. It now recognises a likely rename, keeps `.untag` intact, and offers to re-point the folder to the site's current name.
+- `--name` now takes precedence over the name saved in `.untag`, so you can re-point a folder to a renamed site with `fl --name "Current Name" ./folder` (including in `--yes`/CI mode).
+- `fl sync` now hints that a "not found" site may have been renamed and can be reached with `--name`.
+
+## 2.1.0
+
+- Publish history tracking: the CLI now sends a `publish-id` header with every R2 upload, enabling per-file status tracking and a full publish history in the untag dashboard.
+
+## 2.0.6
+
+- Fix file change detection: use Git blob SHA format so CLI publishes after a GitHub publish no longer mark all files as updated.
+
+## 2.0.5
+
+- Improve `fl --help` output: add long description, usage pattern, and examples.
+
+## 2.0.4
+
+- Show an update notification when a newer version of `fl` is available.
+- Add `untag` as a symlink alias alongside `fl` in the install script.
+
+## 2.0.3
+
+- Show the site URL before uploading when publishing to an existing site.
+
+## 2.0.2
+
+- Fix stale URL shown in the site name confirmation prompt.
+
+## 2.0.1
+
+- Fix processing progress count display.
+- Clean up publish UX copy.
+
+## 2.0.0
+
+- **Breaking:** `fl` is now a single idempotent command — it creates the site on first run and syncs changes on every subsequent run. The separate `fl sync` command is deprecated (still works with a deprecation warning).
+- Add `install.sh` for one-line installation on macOS and Linux.
+
+## 1.3.0
+
+- Rename the binary from `publish` to `fl`.
+- Simplify auth commands: `fl login`, `fl logout`, `fl whoami` (previously `fl auth login` etc.).
+
+## 1.2.3
+
+- Fix progress display — replace progressbar library with simpler `\r`-based progress lines.
+
+## 1.2.2
+
+- Rewrite CLI in Go (previously a Node.js package). The binary is now distributed as a standalone executable via GitHub Releases — no Node.js required.
+
+---
+
+Versions before 1.2.2 were a Node.js program. Those notes are not part of this repository.

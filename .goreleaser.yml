@@ -1,0 +1,38 @@
+version: 2
+
+project_name: fl
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - binary: fl
+    main: .
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - -s -w -X github.com/contextos-hq/untag-cli/internal/config.Version={{ .Env.CLI_VERSION }}
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  name_template: "{{.Tag}}"
+  # install.sh and the docs' releases/latest/download links rely on the newest
+  # CLI release being the repo's "Latest" release.
+  make_latest: true

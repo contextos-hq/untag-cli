@@ -1,0 +1,259 @@
+package cmd
+
+import (
+	"fmt"
+	"path/filepath"
+	"time"
+
+	"github.com/contextos-hq/untag-cli/internal/api"
+	"github.com/contextos-hq/untag-cli/internal/auth"
+	"github.com/contextos-hq/untag-cli/internal/config"
+	"github.com/contextos-hq/untag-cli/internal/files"
+	"github.com/contextos-hq/untag-cli/internal/siteconfig"
+	"github.com/contextos-hq/untag-cli/internal/telemetry"
+	"github.com/contextos-hq/untag-cli/internal/ui"
+	"github.com/spf13/cobra"
+)
+
+var syncCmd = &cobra.Command{
+	Use:        "sync <path>",
+	Short:      "Sync changes to an existing published site",
+	Deprecated: "`fl sync` is deprecated. Use `fl` instead — it creates or syncs automatically.",
+	Args:       cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ui.Header("Sync")
+		name, _ := cmd.Flags().GetString("name")
+		dryRun, _ := cmd.Flags().GetBool("dry-run")
+		verbose, _ := cmd.Flags().GetBool("verbose")
+		return runSync(args[0], name, dryRun, verbose)
+	},
+}
+
+func init() {
+	syncCmd.Flags().String("name", "", "Specify site name if different from folder name")
+	syncCmd.Flags().Bool("dry-run", false, "Show what would be synced without making changes")
+	syncCmd.Flags().Bool("verbose", false, "Show detailed list of all files in each category")
+	rootCmd.AddCommand(syncCmd)
+}
+
+func runSync(inputPath, siteName string, dryRun, verbose bool) error {
+	startTime := time.Now()
+	telemetry.Capture("command_started", map[string]interface{}{
+		"command":     "sync",
+		"cli_version": config.Version,
+	})
+	defer func() { telemetry.Flush() }()
+
+	// A folder published with --anon is linked to an anonymous site, which
+	// `fl sync` (account sites only) can't update.
+	if absPath, err := filepath.Abs(inputPath); err == nil {
+		if cfg := loadLink(absPath); cfg.IsAnon() {
+			msg := fmt.Sprintf("This folder was published without an account, so `fl sync` can't update it.\n"+
+				"Run `fl --anon %s` to update it", shellQuoteAll([]string{inputPath}))
+			if cfg.ClaimURL != "" {
+				msg += fmt.Sprintf(", or claim it to keep it (%s) and then `fl login`", cfg.ClaimURL)
+			} else {
+				msg += ", or claim it and then `fl login`"
+			}
+			return fail(msg + ".")
+		}
+	}
+
+	sp := ui.NewSpinner()
+
+	// Authenticate
+	sp.Start("Checking authentication...")
+	tokenData, err := auth.GetToken()
+	if err != nil || tokenData == nil {
+		sp.Fail("Not authenticated")
+		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+	}
+	userInfo, err := auth.GetUserInfo(config.APIURL(), tokenData.Token)
+	if err != nil {
+		sp.Fail("Authentication failed")
+		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+	}
+	sp.Succeed(fmt.Sprintf("Syncing as: %s", userInfo.DisplayName()))
+
+	// Discover files
+	sp.Start("Discovering files...")
+	absPath, err := filepath.Abs(inputPath)
+	if err != nil || !pathExists(absPath) {
+		sp.Fail("Path not found")
+		return fail(fmt.Sprintf("Path not found: %s", inputPath))
+	}
+
+	discovered, err := files.DiscoverFiles([]string{absPath})
+	if err != nil {
+		sp.Fail("Discovery failed")
+		ui.PrintError(err.Error())
+		telemetry.Capture("command_failed", map[string]interface{}{
+			"command":       "sync",
+			"cli_version":   config.Version,
+			"duration_ms":   time.Since(startTime).Milliseconds(),
+			"error_type":    fmt.Sprintf("%T", err),
+			"error_message": err.Error(),
+		})
+		return failSilently(err.Error())
+	}
+	// Apply config.json's contentInclude/contentExclude, matching the
+	// visibility rules the GitHub-sync build applies to the same config.json.
+	discovered = siteconfig.ApplyVisibility(discovered, absPath)
+
+	if err := files.ValidateFiles(discovered); err != nil {
+		sp.Fail("Validation failed")
+		return fail(err.Error())
+	}
+
+	projectName := siteName
+	if projectName == "" {
+		projectName, err = files.GetProjectName(discovered)
+		if err != nil {
+			return fail(err.Error())
+		}
+	}
+	sp.Succeed(fmt.Sprintf("Found %d file(s) in %s", len(discovered), inputPath))
+
+	// Check site exists
+	existingSite, err := api.GetSiteByName(userInfo.Username, projectName)
+	if err != nil {
+		return fail(err.Error())
+	}
+	if existingSite == nil {
+		return fail(fmt.Sprintf(
+			"Site '%s' not found.\n"+
+				"It may have been renamed — check its current name in your dashboard\n"+
+				"("+config.APIURL()+") and pass it with --name.",
+			projectName,
+		))
+	}
+
+	// Get sync plan
+	sp.Start("Analyzing changes...")
+	var fileMetadata []api.FileMetadata
+	for _, f := range discovered {
+		fileMetadata = append(fileMetadata, api.FileMetadata{
+			Path: f.Path,
+			Size: f.Size,
+			SHA:  f.SHA,
+		})
+	}
+	syncPlan, err := api.SyncFiles(existingSite.Site.ID, fileMetadata, dryRun)
+	if err != nil {
+		sp.Fail("Failed to analyze changes")
+		return fail(err.Error())
+	}
+	sp.Stop()
+
+	// Check for changes
+	if syncPlan.Summary.ToUpload == 0 && syncPlan.Summary.ToUpdate == 0 && syncPlan.Summary.Deleted == 0 {
+		fmt.Printf("\n%s Already in sync!\n", ui.Green("✅"))
+		fmt.Printf("%s All %d file(s) are up to date.\n", ui.Gray(""), len(discovered))
+		fmt.Printf("%s Site: %s\n", ui.Gray(""), existingSite.Site.URL)
+		return nil
+	}
+
+	// Display sync summary
+	displaySyncSummary(syncPlan, projectName, verbose)
+
+	if dryRun || syncPlan.DryRun {
+		fmt.Printf("\n%s Dry run complete - no changes were made to your site\n", ui.Yellow("🔍"))
+		fmt.Printf("%s Run without --dry-run to apply these changes\n", ui.Gray(""))
+		return nil
+	}
+
+	// Upload new/modified files
+	allToUpload := append(syncPlan.ToUpload, syncPlan.ToUpdate...)
+	if len(allToUpload) > 0 {
+		fileByPath := make(map[string]*files.FileInfo, len(discovered))
+		for i := range discovered {
+			fileByPath[discovered[i].Path] = &discovered[i]
+		}
+
+		total := len(allToUpload)
+		var failedUploads []string
+		for i, uploadInfo := range allToUpload {
+			ui.PrintProgress("Uploading", i+1, total)
+			f := fileByPath[uploadInfo.Path]
+			if f == nil {
+				failedUploads = append(failedUploads, uploadInfo.Path+" (not found locally)")
+				continue
+			}
+			if err := api.UploadToR2(uploadInfo.UploadURL, f.Content, uploadInfo.ContentType, syncPlan.PublishId); err != nil {
+				failedUploads = append(failedUploads, uploadInfo.Path+": "+err.Error())
+			}
+		}
+		ui.PrintProgressDone()
+
+		if len(failedUploads) > 0 {
+			fmt.Printf("%s %d file(s) failed to upload\n", ui.Yellow("⚠️"), len(failedUploads))
+			for _, f := range failedUploads {
+				fmt.Printf("  - %s\n", f)
+			}
+			return fail(fmt.Sprintf("%d file(s) failed to upload. Re-run the same command to retry.", len(failedUploads)))
+		} else {
+			if syncPlan.Summary.ToUpload > 0 {
+				fmt.Printf("%s Uploaded %d new file(s)\n", ui.Green("✓"), syncPlan.Summary.ToUpload)
+			}
+			if syncPlan.Summary.ToUpdate > 0 {
+				fmt.Printf("%s Updated %d file(s)\n", ui.Green("✓"), syncPlan.Summary.ToUpdate)
+			}
+		}
+	}
+
+	if len(syncPlan.Deleted) > 0 {
+		fmt.Printf("%s Deleted %d file(s)\n", ui.Green("✓"), len(syncPlan.Deleted))
+	}
+
+	failed := waitForProcessing(existingSite.Site.ID)
+
+	telemetry.Capture("command_succeeded", map[string]interface{}{
+		"command":     "sync",
+		"cli_version": config.Version,
+		"duration_ms": time.Since(startTime).Milliseconds(),
+	})
+
+	fmt.Printf("\n%s Publish complete!\n", ui.Green("✅"))
+	fmt.Printf("   Site: %s\n", ui.Cyan(existingSite.Site.URL))
+	fmt.Printf("   %s\n", ui.Gray(fmt.Sprintf(
+		"New: %d | Updated: %d | Deleted: %d | Unchanged: %d",
+		syncPlan.Summary.ToUpload,
+		syncPlan.Summary.ToUpdate,
+		syncPlan.Summary.Deleted,
+		syncPlan.Summary.Unchanged,
+	)))
+	return processingError(failed)
+}
+
+func displaySyncSummary(plan *api.SyncFilesResponse, projectName string, verbose bool) {
+	fmt.Printf("\n%s\n", ui.Bold(fmt.Sprintf("Publish Summary for '%s':", projectName)))
+
+	if plan.Summary.ToUpload > 0 {
+		fmt.Printf("  %s New files to upload: %d\n", ui.Cyan("📝"), plan.Summary.ToUpload)
+		for _, f := range plan.ToUpload {
+			fmt.Printf("    %s %s\n", ui.Cyan("+"), f.Path)
+		}
+	}
+	if plan.Summary.ToUpdate > 0 {
+		fmt.Printf("  %s Files to update: %d\n", ui.Cyan("🔄"), plan.Summary.ToUpdate)
+		for _, f := range plan.ToUpdate {
+			fmt.Printf("    %s %s\n", ui.Cyan("~"), f.Path)
+		}
+	}
+	if plan.Summary.Deleted > 0 {
+		fmt.Printf("  %s Files to delete: %d\n", ui.Yellow("🗑️"), plan.Summary.Deleted)
+		for _, p := range plan.Deleted {
+			fmt.Printf("    %s %s\n", ui.Yellow("-"), p)
+		}
+	}
+	if plan.Summary.Unchanged > 0 {
+		if verbose {
+			fmt.Printf("  %s Files unchanged: %d\n", ui.Green("✅"), plan.Summary.Unchanged)
+			for _, p := range plan.Unchanged {
+				fmt.Printf("    %s %s\n", ui.Gray("•"), p)
+			}
+		} else {
+			fmt.Printf("  %s Files unchanged: %d\n", ui.Green("✓"), plan.Summary.Unchanged)
+		}
+	}
+}

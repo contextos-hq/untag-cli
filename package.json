@@ -1,0 +1,25 @@
+{
+  "name": "untag-cli",
+  "version": "3.0.0",
+  "description": "Publish markdown files and folders to untag",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/contextos-hq/untag-cli.git"
+  },
+  "bin": {
+    "untag": "npm/untag.js",
+    "fl": "npm/untag.js"
+  },
+  "scripts": {
+    "postinstall": "node npm/install.js"
+  },
+  "files": [
+    "npm/untag.js",
+    "npm/install.js",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}
