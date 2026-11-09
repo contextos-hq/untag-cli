@@ -453,7 +453,7 @@ git tag v3.0.0
 git push origin v3.0.0
 ```
 
-`.goreleaser.yml` builds the release archives for macOS, Linux, and Windows. The version embedded in the binary comes from `CLI_VERSION`.
+`.goreleaser.yml` builds `untag` for macOS, Linux, and Windows. The version embedded in the binary comes from `CLI_VERSION`.
 
 ## License
 

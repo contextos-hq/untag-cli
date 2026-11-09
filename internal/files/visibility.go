@@ -3,7 +3,7 @@ package files
 import "strings"
 
 // IsPathVisible mirrors the GitHub-sync workflow's isPathVisible logic
-// (apps/cloudflare-worker/src/github-sync-workflow.js) so `fl publish`
+// (apps/cloudflare-worker/src/github-sync-workflow.js) so `untag publish`
 // respects the same contentInclude/contentExclude rules as the GitHub-sync
 // build for the same config.json.
 func IsPathVisible(path string, includes, excludes []string) bool {

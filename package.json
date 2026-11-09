@@ -1,6 +1,6 @@
 {
   "name": "untag-cli",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Publish markdown files and folders to untag",
   "license": "AGPL-3.0-only",
   "repository": {

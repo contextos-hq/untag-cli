@@ -212,7 +212,7 @@ func runAuthLogout() error {
 	return nil
 }
 
-// logoutWithEnvToken handles `fl logout` while UNTAG_TOKEN is set: it
+// logoutWithEnvToken handles `untag logout` while UNTAG_TOKEN is set: it
 // removes the saved login (if any) and says which token stays in effect.
 func logoutWithEnvToken(envToken string, startTime time.Time) error {
 	saved, err := auth.GetSavedToken()
@@ -275,7 +275,7 @@ func runAuthStatus() error {
 	}
 	if tokenData == nil {
 		fmt.Printf("\n%s Not authenticated\n\n", ui.Yellow("✗"))
-		fmt.Printf("%s\n", ui.Gray("Run `fl login` to authenticate."))
+		fmt.Printf("%s\n", ui.Gray("Run `untag login` to authenticate."))
 		return failSilently("not authenticated")
 	}
 
@@ -285,7 +285,7 @@ func runAuthStatus() error {
 	userInfo, err := auth.GetUserInfo(config.APIURL(), tokenData.Token)
 	if err != nil {
 		sp.Fail("Authentication token is invalid or expired")
-		fmt.Printf("%s\n", ui.Gray("Run `fl login` to re-authenticate."))
+		fmt.Printf("%s\n", ui.Gray("Run `untag login` to re-authenticate."))
 		return failSilently("not authenticated: token is invalid or expired")
 	}
 

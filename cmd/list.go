@@ -37,10 +37,10 @@ func runList() error {
 	// Authenticate
 	tokenData, err := auth.GetToken()
 	if err != nil || tokenData == nil {
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 	if _, err := auth.GetUserInfo(config.APIURL(), tokenData.Token); err != nil {
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 
 	sp := ui.NewSpinner()

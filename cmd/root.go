@@ -9,15 +9,15 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "fl [paths...]",
+	Use:   "untag [paths...]",
 	Short: "Publish files to untag",
 	Long: `Publish markdown files or folders to untag.
 
 Pass one or more file paths or a directory to publish. On first run a new
 site is created; subsequent runs sync only the changed files.`,
-	Example: `  fl .                     publish the current directory
-  fl ~/notes               publish a folder
-  fl file1.md file2.md     publish specific files`,
+	Example: `  untag .                     publish the current directory
+  untag ~/notes               publish a folder
+  untag file1.md file2.md     publish specific files`,
 	Version: config.Version,
 	// Args and RunE are set in publish.go via init()
 	// Errors are printed by Execute (commands print their own friendly

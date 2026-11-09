@@ -48,7 +48,7 @@ func assertClaimStored(t *testing.T, siteID, token string) {
 	}
 }
 
-// writeLegacyAnonConfig writes .untag the way fl <= 2.7 did, with the
+// writeLegacyAnonConfig writes .untag the way untag <= 2.7 did, with the
 // claim token and claim URL in it.
 func writeLegacyAnonConfig(t *testing.T, dir string) {
 	t.Helper()

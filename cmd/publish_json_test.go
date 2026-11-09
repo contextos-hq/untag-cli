@@ -12,7 +12,7 @@ import (
 	"github.com/contextos-hq/untag-cli/internal/ui"
 )
 
-// runJSON runs `fl --json` and returns the decoded stdout result and
+// runJSON runs `untag --json` and returns the decoded stdout result and
 // everything else (stderr).
 func runJSON(t *testing.T, args []string, anon bool) (publishResult, string, error) {
 	t.Helper()
@@ -136,7 +136,7 @@ func TestPublishAnonInAccountLinkedFolderWarns(t *testing.T) {
 // UNTAG_TOKEN when that is the token in use.
 func TestAuthFailedMsg(t *testing.T) {
 	rejected := fmt.Errorf("%w: 401 Unauthorized", auth.ErrUnauthorized)
-	if msg := authFailedMsg(rejected, false); !strings.Contains(msg, "fl login") || !strings.Contains(msg, "--anon") {
+	if msg := authFailedMsg(rejected, false); !strings.Contains(msg, "untag login") || !strings.Contains(msg, "--anon") {
 		t.Fatalf("saved login: %q", msg)
 	}
 	if msg := authFailedMsg(rejected, true); !strings.Contains(msg, "UNTAG_TOKEN") || !strings.Contains(msg, "--anon") {

@@ -330,8 +330,8 @@ func TestPublishNotLoggedInWithoutAnonFails(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected an error when not logged in and --anon not given")
 	}
-	if !strings.Contains(err.Error(), "fl login") || !strings.Contains(err.Error(), "--anon") {
-		t.Fatalf("message should suggest both `fl login` and `--anon`, got %q", err.Error())
+	if !strings.Contains(err.Error(), "untag login") || !strings.Contains(err.Error(), "--anon") {
+		t.Fatalf("message should suggest both `untag login` and `--anon`, got %q", err.Error())
 	}
 	if f.anonCreateCount() != 0 || len(f.createdNames()) != 0 || len(f.syncIDs()) != 0 {
 		t.Fatal("nothing should be created or synced without login or --anon")
@@ -521,7 +521,7 @@ func TestPublishAnonExpiredOrDeletedSiteClearsConfig(t *testing.T) {
 	}
 }
 
-// A claimed site answers 409: keep the link so a logged-in `fl` can relink
+// A claimed site answers 409: keep the link so a logged-in `untag` can relink
 // to the claimed site, and don't suggest publishing a new anonymous site.
 func TestPublishAnonClaimedSiteKeepsLink(t *testing.T) {
 	f := setupFakeAPI(t, false)
@@ -570,7 +570,7 @@ func TestPublishAnonForbiddenKeepsLink(t *testing.T) {
 }
 
 // The review's M2 flow: publish anonymously, the human claims the site, the
-// agent re-runs `fl --anon` (409, link kept), then a logged-in `fl` updates
+// agent re-runs `untag --anon` (409, link kept), then a logged-in `untag` updates
 // the claimed site rather than creating a duplicate.
 func TestPublishClaimThenAnonThenLoggedInUpdatesClaimedSite(t *testing.T) {
 	f := setupFakeAPI(t, true)
@@ -649,7 +649,7 @@ func TestPublishLoggedInAfterClaimUpdatesClaimedSite(t *testing.T) {
 	}
 }
 
-// untag-2yl: a logged-in `fl <folder>` on a folder published with
+// untag-2yl: a logged-in `untag <folder>` on a folder published with
 // --anon claims the anonymous site into the account (the claim token is on
 // this computer) and updates it, instead of creating a new site.
 func TestPublishLoggedInClaimsAnonSiteAndUpdatesIt(t *testing.T) {
@@ -785,10 +785,10 @@ func TestSyncOnAnonFolderFails(t *testing.T) {
 	_, err := captureOutput(t, func() error { return runSync(dir, "", false, false) })
 
 	if err == nil {
-		t.Fatal("expected fl sync to fail on an anonymously published folder")
+		t.Fatal("expected untag sync to fail on an anonymously published folder")
 	}
-	if !strings.Contains(err.Error(), "fl --anon") {
-		t.Fatalf("message should point to `fl --anon`, got %q", err.Error())
+	if !strings.Contains(err.Error(), "untag --anon") {
+		t.Fatalf("message should point to `untag --anon`, got %q", err.Error())
 	}
 	if len(f.syncIDs()) != 0 {
 		t.Fatal("nothing should be synced")

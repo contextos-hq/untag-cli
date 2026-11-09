@@ -40,10 +40,10 @@ func runDelete(projectName string, skipConfirm bool) error {
 	// Authenticate
 	tokenData, err := auth.GetToken()
 	if err != nil || tokenData == nil {
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 	if _, err := auth.GetUserInfo(config.APIURL(), tokenData.Token); err != nil {
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 
 	sp := ui.NewSpinner()
@@ -65,7 +65,7 @@ func runDelete(projectName string, skipConfirm bool) error {
 
 	if siteToDelete == nil {
 		sp.Fail(fmt.Sprintf("Site '%s' not found", projectName))
-		return fail(fmt.Sprintf("Site '%s' not found.\nUse 'fl list' to see all sites.", projectName))
+		return fail(fmt.Sprintf("Site '%s' not found.\nUse 'untag list' to see all sites.", projectName))
 	}
 
 	sp.Succeed(fmt.Sprintf("Found site: %s", projectName))

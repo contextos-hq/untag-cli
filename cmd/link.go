@@ -9,7 +9,7 @@ import (
 )
 
 // loadLink reads folderPath's .untag (see localconfig.Load), moving a
-// claim token written there by an older fl to the user's claims store, and
+// claim token written there by an older untag to the user's claims store, and
 // tells the user once when it does. It warns if a claim token is, or was,
 // exposed to git (untag-wkc).
 func loadLink(folderPath string) *localconfig.Config {

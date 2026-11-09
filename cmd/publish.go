@@ -29,34 +29,34 @@ var publishAnnotations, publishAnnotationsSet bool
 var publishJSON bool
 
 // notLoggedInMsg is shown when publishing without a login and without --anon.
-// fl never publishes anonymously unless asked to.
-const notLoggedInMsg = "You're not logged in.\nRun `fl login` to publish to your account, or `fl --anon <path>` to publish without an account (expires in 7 days unless claimed)."
+// untag never publishes anonymously unless asked to.
+const notLoggedInMsg = "You're not logged in.\nRun `untag login` to publish to your account, or `untag --anon <path>` to publish without an account (expires in 7 days unless claimed)."
 
 // authFailedMsg explains a failed login check (err from auth.GetUserInfo).
 // fromEnv says the token came from UNTAG_TOKEN, which wins over
-// `fl login`, so "run fl login" alone would be wrong advice.
+// `untag login`, so "run untag login" alone would be wrong advice.
 func authFailedMsg(err error, fromEnv bool) string {
 	if !errors.Is(err, auth.ErrUnauthorized) {
 		return fmt.Sprintf("Couldn't check your login with untag (%s). Check your connection and try again.", err)
 	}
 	if fromEnv {
 		name := auth.ActiveTokenEnv()
-		return name + " is set but untag rejected it (expired, revoked or mistyped).\nCheck the token, or unset " + name + " to use your `fl login` session. To publish without an account, use `fl --anon <path>`."
+		return name + " is set but untag rejected it (expired, revoked or mistyped).\nCheck the token, or unset " + name + " to use your `untag login` session. To publish without an account, use `untag --anon <path>`."
 	}
-	return "Your login has expired or was revoked.\nRun `fl login` to log in again, or `fl --anon <path>` to publish without an account (expires in 7 days unless claimed)."
+	return "Your login has expired or was revoked.\nRun `untag login` to log in again, or `untag --anon <path>` to publish without an account (expires in 7 days unless claimed)."
 }
 
 // anonGoneMsg is shown when a saved anonymous site can no longer be updated
 // (expired, deleted, or the token is no longer valid).
-const anonGoneMsg = "This anonymous site has expired or been deleted, so it can't be updated from here. Its link was removed from .untag: run the same command again to publish a new anonymous site, or run `fl login`."
+const anonGoneMsg = "This anonymous site has expired or been deleted, so it can't be updated from here. Its link was removed from .untag: run the same command again to publish a new anonymous site, or run `untag login`."
 
 // anonClaimedMsg is shown when the saved anonymous site has been claimed into
-// an account. The link is kept so a logged-in `fl` can relink to that site.
-const anonClaimedMsg = "This site has been added to an untag account, so it can't be updated with --anon. Run `fl login` with that account, then publish this folder without --anon to update it."
+// an account. The link is kept so a logged-in `untag` can relink to that site.
+const anonClaimedMsg = "This site has been added to an untag account, so it can't be updated with --anon. Run `untag login` with that account, then publish this folder without --anon to update it."
 
 // anonNotLinkableNote is shown after an anonymous publish of files (or
 // several paths), which has no folder to link, so it can't be updated.
-const anonNotLinkableNote = "Sites published from files or from several paths can't be updated without an account. Publish a single folder, or run `fl login`."
+const anonNotLinkableNote = "Sites published from files or from several paths can't be updated without an account. Publish a single folder, or run `untag login`."
 
 func init() {
 	rootCmd.Args = cobra.ArbitraryArgs
@@ -79,7 +79,7 @@ func init() {
 	}
 }
 
-// publishResult is what `fl --json` prints on stdout, and is filled in as a
+// publishResult is what `untag --json` prints on stdout, and is filled in as a
 // publish goes: whatever is known is printed even if the publish fails (e.g.
 // an anonymous site's claim link after a failed upload).
 type publishResult struct {
@@ -142,7 +142,7 @@ func runPublish(inputPaths []string, nameFlag string, skipConfirm, overwrite, an
 	defer func() { telemetry.Flush() }()
 
 	if anon && publishAnnotationsSet {
-		return fail("--annotations isn't available with --anon: annotations need a site in your account. Run `fl login`, then publish with --annotations.")
+		return fail("--annotations isn't available with --anon: annotations need a site in your account. Run `untag login`, then publish with --annotations.")
 	}
 
 	sp := ui.NewSpinner()
@@ -301,7 +301,7 @@ func runPublish(inputPaths []string, nameFlag string, skipConfirm, overwrite, an
 		if skipConfirm {
 			return fail(fmt.Sprintf(
 				"Re-point this folder by re-running with the current name:\n"+
-					"  fl --name \"<current site name>\" %s",
+					"  untag --name \"<current site name>\" %s",
 				folderPath,
 			))
 		}
@@ -889,8 +889,8 @@ func resolveExistingSiteConflict(username, siteName string, existing *api.GetSit
 		if skipConfirm {
 			return "", nil, fail(fmt.Sprintf(
 				"Refusing to overwrite existing site %q (--yes does not imply overwrite).\n"+
-					"  To publish as a new site:      fl --name <new-name> %s\n"+
-					"  To replace the existing site:  fl --overwrite %s",
+					"  To publish as a new site:      untag --name <new-name> %s\n"+
+					"  To replace the existing site:  untag --overwrite %s",
 				siteName, paths, paths,
 			))
 		}

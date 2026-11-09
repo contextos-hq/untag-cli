@@ -140,7 +140,7 @@ func (f *fakeAPI) handler(w http.ResponseWriter, r *http.Request) {
 		limited := f.anonRateLimited
 		f.mu.Unlock()
 		if limited {
-			writeJSON(w, 429, map[string]string{"error": "rate_limited", "message": "Too many anonymous sites from this network. Try again later, or run `fl login`."})
+			writeJSON(w, 429, map[string]string{"error": "rate_limited", "message": "Too many anonymous sites from this network. Try again later, or run `untag login`."})
 			return
 		}
 		writeJSON(w, 200, map[string]string{

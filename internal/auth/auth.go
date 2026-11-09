@@ -52,7 +52,7 @@ func SaveToken(token, username string) error {
 
 // TokenEnvVar names the environment variable that supplies an API token
 // (e.g. a personal access token for CI or agents). It takes precedence over
-// the token saved by `fl login`.
+// the token saved by `untag login`.
 const TokenEnvVar = "UNTAG_TOKEN"
 
 // ActiveTokenEnv is the environment variable supplying the current token.
@@ -73,7 +73,7 @@ func TokenFromEnv() bool {
 }
 
 // GetToken returns the token from UNTAG_TOKEN if set, otherwise the one
-// saved by `fl login` (nil if neither exists). An env token has no Username;
+// saved by `untag login` (nil if neither exists). An env token has no Username;
 // callers resolve the user via GetUserInfo.
 func GetToken() (*TokenData, error) {
 	if v := envToken(); v != "" {
@@ -82,7 +82,7 @@ func GetToken() (*TokenData, error) {
 	return GetSavedToken()
 }
 
-// GetSavedToken returns the token saved by `fl login` (nil if none is saved).
+// GetSavedToken returns the token saved by `untag login` (nil if none is saved).
 func GetSavedToken() (*TokenData, error) {
 	b, err := os.ReadFile(tokenFile())
 	if err != nil {

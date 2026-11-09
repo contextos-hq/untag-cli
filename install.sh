@@ -89,4 +89,4 @@ case ":$PATH:" in
   *":$INSTALL_DIR:"*) ;;
   *) echo "Note: $INSTALL_DIR is not on your PATH. Add it, e.g. export PATH=\"$INSTALL_DIR:\$PATH\"" ;;
 esac
-echo "Run 'fl login' to get started."
+echo "Run 'untag login' to get started."

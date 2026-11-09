@@ -10,7 +10,7 @@ import (
 
 func TestRead_ParsesContentExcludeAndInclude(t *testing.T) {
 	dir := t.TempDir()
-	body := `{"title": "fl exclude test", "contentExclude": ["/secret"], "contentInclude": ["/public"]}`
+	body := `{"title": "untag exclude test", "contentExclude": ["/secret"], "contentInclude": ["/public"]}`
 	if err := os.WriteFile(filepath.Join(dir, FileName), []byte(body), 0644); err != nil {
 		t.Fatal(err)
 	}

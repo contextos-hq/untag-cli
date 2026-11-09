@@ -22,7 +22,7 @@ const FileName = ".untag"
 type Config struct {
 	SiteName string `json:"siteName,omitempty"`
 
-	// Anonymous site (published with `fl --anon`).
+	// Anonymous site (published with `untag --anon`).
 	Anon       bool   `json:"anon,omitempty"`
 	SiteID     string `json:"siteId,omitempty"`
 	ClaimToken string `json:"claimToken,omitempty"`

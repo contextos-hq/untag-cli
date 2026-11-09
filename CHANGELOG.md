@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.1
+
+- Help and command messages use `untag` as the command name.
+
 ## 3.0.0
 
 - The CLI talks to untag at `https://cloud.untag.ru`. Published site links come back from the API.

@@ -18,7 +18,7 @@ import (
 var syncCmd = &cobra.Command{
 	Use:        "sync <path>",
 	Short:      "Sync changes to an existing published site",
-	Deprecated: "`fl sync` is deprecated. Use `fl` instead — it creates or syncs automatically.",
+	Deprecated: "`untag sync` is deprecated. Use `untag` instead — it creates or syncs automatically.",
 	Args:       cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		ui.Header("Sync")
@@ -45,15 +45,15 @@ func runSync(inputPath, siteName string, dryRun, verbose bool) error {
 	defer func() { telemetry.Flush() }()
 
 	// A folder published with --anon is linked to an anonymous site, which
-	// `fl sync` (account sites only) can't update.
+	// `untag sync` (account sites only) can't update.
 	if absPath, err := filepath.Abs(inputPath); err == nil {
 		if cfg := loadLink(absPath); cfg.IsAnon() {
-			msg := fmt.Sprintf("This folder was published without an account, so `fl sync` can't update it.\n"+
-				"Run `fl --anon %s` to update it", shellQuoteAll([]string{inputPath}))
+			msg := fmt.Sprintf("This folder was published without an account, so `untag sync` can't update it.\n"+
+				"Run `untag --anon %s` to update it", shellQuoteAll([]string{inputPath}))
 			if cfg.ClaimURL != "" {
-				msg += fmt.Sprintf(", or claim it to keep it (%s) and then `fl login`", cfg.ClaimURL)
+				msg += fmt.Sprintf(", or claim it to keep it (%s) and then `untag login`", cfg.ClaimURL)
 			} else {
-				msg += ", or claim it and then `fl login`"
+				msg += ", or claim it and then `untag login`"
 			}
 			return fail(msg + ".")
 		}
@@ -66,12 +66,12 @@ func runSync(inputPath, siteName string, dryRun, verbose bool) error {
 	tokenData, err := auth.GetToken()
 	if err != nil || tokenData == nil {
 		sp.Fail("Not authenticated")
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 	userInfo, err := auth.GetUserInfo(config.APIURL(), tokenData.Token)
 	if err != nil {
 		sp.Fail("Authentication failed")
-		return fail("You must be authenticated to use this command.\nRun `fl login` to authenticate.")
+		return fail("You must be authenticated to use this command.\nRun `untag login` to authenticate.")
 	}
 	sp.Succeed(fmt.Sprintf("Syncing as: %s", userInfo.DisplayName()))
 

@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var Version = "3.0.0"
+var Version = "3.0.1"
 
 func APIURL() string {
 	if v := os.Getenv("API_URL"); v != "" {

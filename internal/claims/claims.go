@@ -1,5 +1,5 @@
 // Package claims stores the claim tokens of anonymous sites (published with
-// `fl --anon`) in the user's config directory, keyed by site ID. A claim
+// `untag --anon`) in the user's config directory, keyed by site ID. A claim
 // token lets anyone holding it update or claim the site, so it is kept out
 // of the project folder (where .untag is often committed to git) and in
 // a file only the user can read.

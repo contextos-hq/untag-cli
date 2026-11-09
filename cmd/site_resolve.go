@@ -32,7 +32,7 @@ func resolveSite(nameFlag string) (*api.Site, error) {
 
 	if siteName == "" {
 		if len(sitesData.Sites) == 0 {
-			return nil, fail("You have no sites yet.\nRun `fl <path>` to publish your first site.")
+			return nil, fail("You have no sites yet.\nRun `untag <path>` to publish your first site.")
 		}
 		if len(sitesData.Sites) > 1 {
 			fmt.Fprintf(os.Stderr, "\n%s\n\n", ui.Bold("Multiple sites found — specify one with --name:"))
@@ -49,5 +49,5 @@ func resolveSite(nameFlag string) (*api.Site, error) {
 			return &sitesData.Sites[i], nil
 		}
 	}
-	return nil, fail(fmt.Sprintf("Site %q not found.\nUse `fl list` to see all sites.", siteName))
+	return nil, fail(fmt.Sprintf("Site %q not found.\nUse `untag list` to see all sites.", siteName))
 }
